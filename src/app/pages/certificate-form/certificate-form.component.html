@@ -1,0 +1,108 @@
+<mat-stepper class="h-screen" linear>
+  <mat-step [hasError]="invalidPdf()" [completed]="pdfFile() && !invalidPdf()">
+    <ng-template matStepLabel>Selecione o PDF</ng-template>
+    <div class="flex flex-col gap-4 px-8">
+      <h6>Selecione um modelo de certificado com os seguintes critérios:</h6>
+      <ol class="list-decimal pl-8">
+        <li>Formato de arquivo PDF.</li>
+        <li>
+          Um campo de formulário cujo identificador seja obrigatoriamente
+          <span class="p-1 rounded bg-gray-200 font-mono"
+            >nomeParticipante</span
+          >
+        </li>
+      </ol>
+      <div class="flex items-center gap-4">
+        <button mat-fab (click)="templateUpload.click()">
+          <mat-icon fontIcon="attach_file" />
+        </button>
+        <p class="mat-small font-medium">
+          {{ pdfFile()?.name || "Nenhum PDF selecionado" }}
+        </p>
+        <input
+          type="file"
+          accept="application/pdf"
+          (change)="onTemplateSelected($event)"
+          #templateUpload
+          class="hidden"
+        />
+      </div>
+      @if (invalidPdf() && pdfFile()) {
+      <p class="text-red-700">PDF inválido.</p>
+      }
+      <div class="mt-4">
+        <button mat-stroked-button matStepperNext [disabled]="invalidPdf()">
+          Próximo
+        </button>
+      </div>
+    </div>
+  </mat-step>
+  <mat-step
+    [hasError]="invalidWorkbook()"
+    [completed]="workbookFile() && !invalidWorkbook()"
+  >
+    <ng-template matStepLabel>Selecione a planilha</ng-template>
+    <div class="flex flex-col gap-4 px-8">
+      <h6>Selecione uma planilha com os seguintes critérios:</h6>
+      <ol class="list-decimal pl-8">
+        <li>Formato de arquivo XLSX.</li>
+        <li>
+          A planilha deve ter apenas <strong>uma</strong> aba/guia com qualquer
+          nome.
+        </li>
+        <li>Nessa guia, é preciso ter uma tabela de apenas uma coluna.</li>
+        <li>
+          A primeira célula será o nome da coluna, e esse nome deve ser
+          obrigatoriamente
+          <span class="p-1 rounded bg-gray-200 font-mono"
+            >nomeParticipante</span
+          >
+        </li>
+      </ol>
+      <div class="flex items-center gap-4">
+        <button mat-fab (click)="workbookUpload.click()">
+          <mat-icon fontIcon="attach_file" />
+        </button>
+        <p class="mat-small font-medium">
+          {{ workbookFile()?.name || "Nenhuma planilha selecionada" }}
+        </p>
+        <input
+          type="file"
+          accept=".xlsx"
+          (change)="onSheetSelected($event)"
+          #workbookUpload
+          class="hidden"
+        />
+      </div>
+      @if (invalidWorkbook() && workbookFile()) {
+      <p class="text-red-700">Planilha inválida.</p>
+      }
+      <div class="flex gap-4 mt-4">
+        <button mat-stroked-button matStepperPrevious>Anterior</button>
+        <button
+          mat-stroked-button
+          matStepperNext
+          [disabled]="invalidWorkbook()"
+        >
+          Próximo
+        </button>
+      </div>
+    </div>
+  </mat-step>
+  <mat-step>
+    <ng-template matStepLabel>Confira os dados</ng-template>
+    <div class="flex flex-col gap-4 px-8">
+      <h6>Gerar certificados</h6>
+      <p>
+        {{ certificatesService.names().length }} nomes encontrados na planilha.
+        Um número correspondente de certificados será gerado.
+      </p>
+      <div class="flex gap-4 mt-4">
+        <button mat-stroked-button matStepperPrevious>Anterior</button>
+        <button mat-flat-button (click)="generateCertificates()">
+          Gerar certificados
+        </button>
+      </div>
+    </div>
+  </mat-step>
+</mat-stepper>
