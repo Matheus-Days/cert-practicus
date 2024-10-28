@@ -42,7 +42,7 @@ export class CertificatesService {
   }
 
   async generateCertificates(): Promise<Blob | undefined> {
-    if (this._names.length === 0) throw new Error('Empty names list');
+    if (this._names().length === 0) throw new Error('Empty names list');
     const filledPdfs: PdfFile[] = await Promise.all(
       this._names().map(async (name, i) => {
         if (!this.pdfArrayBuffer) throw new Error('Missing PDF template');
@@ -67,7 +67,13 @@ export class CertificatesService {
     const worksheet = workbook.Sheets[sheetName];
     type Cell = { nomeParticipante: string };
     const json: Cell[] = utils.sheet_to_json(worksheet);
-    this._names.set(json.map((cell) => cell.nomeParticipante).filter(c => c));
+    const names = json
+      .map((cell) => cell.nomeParticipante)
+      .filter((c) => c)
+      .sort((a, b) => {
+        return a > b ? 1 : -1;
+      });
+    this._names.set(names);
     this.checkValidity();
   }
 }
@@ -80,6 +86,7 @@ async function fillPdfWithName(
   const form = pdf.getForm();
   const nomeParticipante = form.getTextField('nomeParticipante');
   nomeParticipante.setText(name);
+  form.flatten();
   return await pdf.save();
 }
 
