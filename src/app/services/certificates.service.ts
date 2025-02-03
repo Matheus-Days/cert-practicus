@@ -68,7 +68,7 @@ export class CertificatesService {
     type Cell = { nomeParticipante: string };
     const json: Cell[] = utils.sheet_to_json(worksheet);
     const names = json
-      .map((cell) => cell.nomeParticipante)
+      .map((cell) => cell.nomeParticipante.toUpperCase())
       .filter((c) => c)
       .sort((a, b) => {
         return a > b ? 1 : -1;
