@@ -41,14 +41,18 @@ export class CertificatesService {
     this._workbookValid.set(this._names().length > 0);
   }
 
-  async generateCertificates(): Promise<Blob | undefined> {
+  async generateCertificates(placeAndDate: string): Promise<Blob | undefined> {
     if (this._names().length === 0) throw new Error('Empty names list');
     const filledPdfs: PdfFile[] = await Promise.all(
       this._names().map(async (name, i) => {
         if (!this.pdfArrayBuffer) throw new Error('Missing PDF template');
         return {
           name: `${i + 1}-${name}.pdf`,
-          content: await fillPdfWithName(name, this.pdfArrayBuffer),
+          content: await fillPdfWithName(
+            name,
+            placeAndDate,
+            this.pdfArrayBuffer
+          ),
         };
       })
     );
@@ -80,12 +84,15 @@ export class CertificatesService {
 
 async function fillPdfWithName(
   name: string,
+  placeAndDate: string,
   pdfArrayBuffer: ArrayBuffer
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.load(pdfArrayBuffer);
   const form = pdf.getForm();
   const nomeParticipante = form.getTextField('nomeParticipante');
   nomeParticipante.setText(name);
+  const localEData = form.getTextField('localEData');
+  localEData.setText(placeAndDate);
   form.flatten();
   return await pdf.save();
 }

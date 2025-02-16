@@ -1,19 +1,39 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatStepperModule } from '@angular/material/stepper';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { CertificatesService } from '../../services/certificates.service';
+import {
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 
 @Component({
   selector: 'certificate-form',
   standalone: true,
   templateUrl: './certificate-form.component.html',
   styleUrl: './certificate-form.component.scss',
-  imports: [MatButtonModule, MatIconModule, MatStepperModule],
+  imports: [
+    MatButtonModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatStepperModule,
+    ReactiveFormsModule,
+  ],
 })
 export class CertificateFormComponent {
   certificatesService = inject(CertificatesService);
+
+  placeAndDateControl = new FormControl<string>('', {
+    nonNullable: true,
+    validators: Validators.required,
+  });
+  form = new FormGroup({ placeAndDateControl: this.placeAndDateControl });
 
   pdfFile = signal<File | undefined>(undefined);
   workbookFile = signal<File | undefined>(undefined);
@@ -30,7 +50,9 @@ export class CertificateFormComponent {
   );
 
   async generateCertificates(): Promise<void> {
-    const zipBlob = await this.certificatesService.generateCertificates();
+    const zipBlob = await this.certificatesService.generateCertificates(
+      formatPlaceAndDate(this.placeAndDateControl.value)
+    );
     if (!zipBlob) return;
     const url = URL.createObjectURL(zipBlob);
     const link = document.createElement('a');
@@ -62,4 +84,20 @@ function fileFromEvent(event: Event): File | undefined {
   if (!('files' in event.target)) return;
   const files = event.target.files as FileList;
   return files[0];
+}
+
+function formatPlaceAndDate(inputString?: string): string {
+  if (!inputString) return "";
+
+  const trimmedString = inputString.trim();
+
+  const firstLetter = trimmedString.charAt(0).toUpperCase();
+  const restOfString = trimmedString.slice(1);
+  let formattedString = firstLetter + restOfString;
+
+  if (!formattedString.endsWith(".")) {
+    formattedString += ".";
+  }
+
+  return formattedString;
 }
