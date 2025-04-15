@@ -48,7 +48,7 @@ export class CertificatesService {
         if (!this.pdfArrayBuffer) throw new Error('Missing PDF template');
         return {
           name: `${i + 1}-${name}.pdf`,
-          content: await fillPdfWithName(
+          content: await fillPdfWithData(
             name,
             placeAndDate,
             this.pdfArrayBuffer
@@ -82,7 +82,7 @@ export class CertificatesService {
   }
 }
 
-async function fillPdfWithName(
+async function fillPdfWithData(
   name: string,
   placeAndDate: string,
   pdfArrayBuffer: ArrayBuffer

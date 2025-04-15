@@ -1,4 +1,8 @@
 <mat-stepper class="h-screen" linear>
+  <mat-step>
+    <ng-template matStepLabel>Certificado digital</ng-template>
+    <digital-certificate-component />
+  </mat-step>
   <mat-step [hasError]="invalidPdf()" [completed]="pdfFile() && !invalidPdf()">
     <ng-template matStepLabel>Selecione o PDF</ng-template>
     <div class="flex flex-col gap-4 px-8">
@@ -7,15 +11,12 @@
         <li>Formato de arquivo PDF.</li>
         <li>
           Um campo de formulário cujo identificador seja obrigatoriamente
-          <span class="p-1 rounded bg-gray-200 font-mono"
-            >nomeParticipante</span
+          <span class="p-1 rounded bg-gray-200 font-mono">nomeParticipante</span
           >.
         </li>
         <li>
           E um outro campo cujo identificador seja obrigatoriamente
-          <span class="p-1 rounded bg-gray-200 font-mono"
-            >localEData</span
-          >.
+          <span class="p-1 rounded bg-gray-200 font-mono">localEData</span>.
         </li>
       </ol>
       <div class="flex items-center gap-4">
