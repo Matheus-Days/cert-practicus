@@ -1,7 +1,13 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { BlobWriter, ZipWriter, Uint8ArrayReader } from '@zip.js/zip.js';
 import { PDFDocument, PDFTextField } from 'pdf-lib';
 import { read, utils } from 'xlsx';
+import { PdfSigningService } from './cryptography/pdf-signing.service';
+
+type PdfNamedDocument = {
+  name: string;
+  content: PDFDocument;
+};
 
 type PdfFile = {
   name: string;
@@ -12,6 +18,8 @@ type PdfFile = {
   providedIn: 'root',
 })
 export class CertificatesService {
+  pdfSigningService = inject(PdfSigningService);
+
   private pdfArrayBuffer: ArrayBuffer | undefined;
   private _names = signal<string[]>([]);
 
@@ -21,8 +29,6 @@ export class CertificatesService {
   names = computed(() => this._names());
   pdfValid = computed(() => this._pdfValid());
   workbookValid = computed(() => this._workbookValid());
-
-  constructor() {}
 
   private async checkValidity(): Promise<void> {
     if (this.pdfArrayBuffer) {
@@ -43,12 +49,12 @@ export class CertificatesService {
 
   async generateCertificates(placeAndDate: string): Promise<Blob | undefined> {
     if (this._names().length === 0) throw new Error('Empty names list');
-    const filledPdfs: PdfFile[] = await Promise.all(
+    const filledPdfs: PdfNamedDocument[] = await Promise.all(
       this._names().map(async (name, i) => {
         if (!this.pdfArrayBuffer) throw new Error('Missing PDF template');
         return {
           name: `${i + 1}-${name}.pdf`,
-          content: await fillPdfWithName(
+          content: await fillPdfWithData(
             name,
             placeAndDate,
             this.pdfArrayBuffer
@@ -56,7 +62,18 @@ export class CertificatesService {
         };
       })
     );
-    return generateZip(filledPdfs);
+    const signedPdfs = await Promise.all(
+      filledPdfs.map((pdf) => this.signPdf(pdf))
+    );
+    return generateZip(signedPdfs);
+  }
+
+  async signPdf(pdf: PdfNamedDocument): Promise<PdfFile> {
+    const signedPdf = await this.pdfSigningService.signPdf(pdf.content);
+    return {
+      name: pdf.name,
+      content: signedPdf,
+    };
   }
 
   async loadPdf(file: File): Promise<void> {
@@ -82,11 +99,11 @@ export class CertificatesService {
   }
 }
 
-async function fillPdfWithName(
+async function fillPdfWithData(
   name: string,
   placeAndDate: string,
   pdfArrayBuffer: ArrayBuffer
-): Promise<Uint8Array> {
+): Promise<PDFDocument> {
   const pdf = await PDFDocument.load(pdfArrayBuffer);
   const form = pdf.getForm();
   const nomeParticipante = form.getTextField('nomeParticipante');
@@ -94,7 +111,7 @@ async function fillPdfWithName(
   const localEData = form.getTextField('localEData');
   localEData.setText(placeAndDate);
   form.flatten();
-  return await pdf.save();
+  return pdf;
 }
 
 async function generateZip(files: PdfFile[]): Promise<Blob | undefined> {

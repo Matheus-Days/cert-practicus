@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatStepperModule } from '@angular/material/stepper';
 import { CertificatesService } from '../../services/certificates.service';
 import {
@@ -11,6 +12,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { ICertificate, IProvider } from '@peculiar/fortify-client-core';
+import { DigitalCertificateComponent } from '../../../components/digital-certificate/digital-certificate.component';
 
 @Component({
   selector: 'certificate-form',
@@ -18,10 +21,12 @@ import {
   templateUrl: './certificate-form.component.html',
   styleUrl: './certificate-form.component.scss',
   imports: [
+    DigitalCertificateComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     MatStepperModule,
     ReactiveFormsModule,
   ],
@@ -33,7 +38,14 @@ export class CertificateFormComponent {
     nonNullable: true,
     validators: Validators.required,
   });
-  form = new FormGroup({ placeAndDateControl: this.placeAndDateControl });
+  certificateProviderControl = new FormControl<IProvider | undefined>(undefined, Validators.required);
+  certificateControl = new FormControl<ICertificate | undefined>(undefined, Validators.required);
+
+  form = new FormGroup({
+    placeAndDateControl: this.placeAndDateControl,
+    certificateProviderControl: this.certificateProviderControl,
+    certificateControl: this.certificateControl,
+  });
 
   pdfFile = signal<File | undefined>(undefined);
   workbookFile = signal<File | undefined>(undefined);
@@ -43,6 +55,7 @@ export class CertificateFormComponent {
       !this.pdfFile() ||
       (!!this.pdfFile() && !this.certificatesService.pdfValid())
   );
+
   invalidWorkbook = computed<boolean>(
     () =>
       !this.workbookFile ||
