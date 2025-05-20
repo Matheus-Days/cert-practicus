@@ -1,8 +1,4 @@
-<mat-stepper class="h-screen" linear>
-  <mat-step>
-    <ng-template matStepLabel>Certificado digital</ng-template>
-    <digital-certificate-component />
-  </mat-step>
+<mat-stepper #stepper class="h-screen" linear>
   <mat-step [hasError]="invalidPdf()" [completed]="pdfFile() && !invalidPdf()">
     <ng-template matStepLabel>Selecione o PDF</ng-template>
     <div class="flex flex-col gap-4 px-8">
@@ -43,6 +39,10 @@
         </button>
       </div>
     </div>
+  </mat-step>
+  <mat-step>
+    <ng-template matStepLabel>Certificado digital</ng-template>
+    <digital-certificate-component (selected)="stepper.next()" (cancel)="stepper.previous()" />
   </mat-step>
   <mat-step
     [hasError]="invalidWorkbook()"

@@ -13,21 +13,25 @@ window.Buffer = window.Buffer || Buffer;
   providedIn: 'root',
 })
 export class PdfSigningService {
+  selectedCertificate: ISelectionSuccessEvent | undefined;
+
   async signPdf(
-    certDetails: ISelectionSuccessEvent,
     pdfDoc: PDFDocument
-  ): Promise<Blob> {
+  ): Promise<Uint8Array> {
+    if (!this.selectedCertificate) {
+      throw new Error('No certificate selected');
+    }
     const { pdfBuffer, byteRange, placeholderLength } = await prepareForSign({
       pdfDoc,
     });
-    const signedPdfBuffer = await performSign(certDetails, pdfBuffer);
+    const signedPdfBuffer = await performSign(this.selectedCertificate, pdfBuffer);
     const signedPdf = placeSignature({
       pdfBuffer,
       byteRange,
       placeholderLength,
       rawSignature: signedPdfBuffer,
     });
-    return new Blob([signedPdf], { type: 'application/pdf' });
+    return signedPdf;
   }
 }
 
