@@ -1,24 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { BlobWriter, ZipWriter, Uint8ArrayReader } from '@zip.js/zip.js';
-import { PDFDocument, PDFTextField } from 'pdf-lib';
 import { read, utils } from 'xlsx';
-import { PdfSigningService } from './cryptography/pdf-signing.service';
-
-type PdfNamedDocument = {
-  name: string;
-  content: PDFDocument;
-};
-
-type PdfFile = {
-  name: string;
-  content: Uint8Array;
-};
+import { CertificateWorkerService, CertificateProgress, CertificateResult } from './certificate-worker.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class CertificatesService {
-  pdfSigningService = inject(PdfSigningService);
+  private certificateWorkerService = inject(CertificateWorkerService);
 
   private pdfArrayBuffer: ArrayBuffer | undefined;
   private _names = signal<string[]>([]);
@@ -30,10 +18,19 @@ export class CertificatesService {
   pdfValid = computed(() => this._pdfValid());
   workbookValid = computed(() => this._workbookValid());
 
+  // Expor observables do worker
+  isProcessing = computed(() => this.certificateWorkerService.isProcessing());
+  progress = computed(() => this.certificateWorkerService.progress());
+  progress$ = this.certificateWorkerService.progress$;
+  result$ = this.certificateWorkerService.result$;
+  error$ = this.certificateWorkerService.error$;
+
   private async checkValidity(): Promise<void> {
     if (this.pdfArrayBuffer) {
+      // Importação dinâmica para evitar problemas no worker
+      const { PDFDocument } = await import('pdf-lib');
       const pdf = await PDFDocument.load(this.pdfArrayBuffer);
-      let nomeParticipante: PDFTextField | undefined;
+      let nomeParticipante: any;
       try {
         const form = pdf.getForm();
         nomeParticipante = form.getTextField('nomeParticipante');
@@ -47,33 +44,20 @@ export class CertificatesService {
     this._workbookValid.set(this._names().length > 0);
   }
 
-  async generateCertificates(placeAndDate: string): Promise<Blob | undefined> {
-    if (this._names().length === 0) throw new Error('Empty names list');
-    const filledPdfs: PdfNamedDocument[] = await Promise.all(
-      this._names().map(async (name, i) => {
-        if (!this.pdfArrayBuffer) throw new Error('Missing PDF template');
-        return {
-          name: `${i + 1}-${name}.pdf`,
-          content: await fillPdfWithData(
-            name,
-            placeAndDate,
-            this.pdfArrayBuffer
-          ),
-        };
-      })
-    );
-    const signedPdfs = await Promise.all(
-      filledPdfs.map((pdf) => this.signPdf(pdf))
-    );
-    return generateZip(signedPdfs);
-  }
+  generateCertificates(placeAndDate: string, timeout: number): void {
+    if (this._names().length === 0) {
+      throw new Error('Lista de nomes vazia');
+    }
+    if (!this.pdfArrayBuffer) {
+      throw new Error('Template PDF não carregado');
+    }
 
-  async signPdf(pdf: PdfNamedDocument): Promise<PdfFile> {
-    const signedPdf = await this.pdfSigningService.signPdf(pdf.content);
-    return {
-      name: pdf.name,
-      content: signedPdf,
-    };
+    this.certificateWorkerService.generateCertificates(
+      this._names(),
+      placeAndDate,
+      this.pdfArrayBuffer,
+      timeout
+    );
   }
 
   async loadPdf(file: File): Promise<void> {
@@ -96,39 +80,6 @@ export class CertificatesService {
       });
     this._names.set(names);
     this.checkValidity();
-  }
-}
-
-async function fillPdfWithData(
-  name: string,
-  placeAndDate: string,
-  pdfArrayBuffer: ArrayBuffer
-): Promise<PDFDocument> {
-  const pdf = await PDFDocument.load(pdfArrayBuffer);
-  const form = pdf.getForm();
-  const nomeParticipante = form.getTextField('nomeParticipante');
-  nomeParticipante.setText(name);
-  const localEData = form.getTextField('localEData');
-  localEData.setText(placeAndDate);
-  form.flatten();
-  return pdf;
-}
-
-async function generateZip(files: PdfFile[]): Promise<Blob | undefined> {
-  try {
-    const blobWriter = new BlobWriter('application/zip');
-    const zipWriter = new ZipWriter(blobWriter);
-
-    for (const file of files) {
-      let reader;
-      reader = new Uint8ArrayReader(file.content);
-      await zipWriter.add(file.name, reader);
-    }
-
-    return await zipWriter.close();
-  } catch (error) {
-    console.error('Error generating ZIP:', error);
-    return undefined;
   }
 }
 

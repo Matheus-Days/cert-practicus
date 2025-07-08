@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatStepperModule } from '@angular/material/stepper';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { CertificatesService } from '../../services/certificates.service';
 import {
   FormControl,
@@ -14,6 +16,7 @@ import {
 } from '@angular/forms';
 import { ICertificate, IProvider } from '@peculiar/fortify-client-core';
 import { DigitalCertificateComponent } from '../../../components/digital-certificate/digital-certificate.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'certificate-form',
@@ -28,27 +31,39 @@ import { DigitalCertificateComponent } from '../../../components/digital-certifi
     MatInputModule,
     MatSelectModule,
     MatStepperModule,
+    MatProgressBarModule,
     ReactiveFormsModule,
   ],
 })
-export class CertificateFormComponent {
+export class CertificateFormComponent implements OnInit, OnDestroy {
   certificatesService = inject(CertificatesService);
+  private snackBar = inject(MatSnackBar);
+  private subscriptions = new Subscription();
 
   placeAndDateControl = new FormControl<string>('', {
     nonNullable: true,
     validators: Validators.required,
+  });
+  timeoutControl = new FormControl<number>(500, {
+    nonNullable: true,
+    validators: [Validators.required, Validators.min(100)],
   });
   certificateProviderControl = new FormControl<IProvider | undefined>(undefined, Validators.required);
   certificateControl = new FormControl<ICertificate | undefined>(undefined, Validators.required);
 
   form = new FormGroup({
     placeAndDateControl: this.placeAndDateControl,
+    timeoutControl: this.timeoutControl,
     certificateProviderControl: this.certificateProviderControl,
     certificateControl: this.certificateControl,
   });
 
   pdfFile = signal<File | undefined>(undefined);
   workbookFile = signal<File | undefined>(undefined);
+
+  // Computed properties para o progresso
+  isProcessing = computed(() => this.certificatesService.isProcessing());
+  progress = computed(() => this.certificatesService.progress());
 
   invalidPdf = computed<boolean>(
     () =>
@@ -58,19 +73,52 @@ export class CertificateFormComponent {
 
   invalidWorkbook = computed<boolean>(
     () =>
-      !this.workbookFile ||
+      !this.workbookFile() ||
       (!!this.workbookFile() && !this.certificatesService.workbookValid())
   );
 
-  async generateCertificates(): Promise<void> {
-    const zipBlob = await this.certificatesService.generateCertificates(
-      formatPlaceAndDate(this.placeAndDateControl.value)
+  ngOnInit(): void {
+    // Inscrever nos observables do worker
+    this.subscriptions.add(
+      this.certificatesService.result$.subscribe((result) => {
+        this.downloadZip(result.zipBlob);
+        this.snackBar.open('Certificados gerados com sucesso!', 'Fechar', {
+          duration: 3000,
+        });
+      })
     );
-    if (!zipBlob) return;
+
+    this.subscriptions.add(
+      this.certificatesService.error$.subscribe((error) => {
+        this.snackBar.open(`Erro: ${error}`, 'Fechar', {
+          duration: 5000,
+        });
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  generateCertificates(): void {
+    try {
+      this.certificatesService.generateCertificates(
+        formatPlaceAndDate(this.placeAndDateControl.value),
+        this.timeoutControl.value
+      );
+    } catch (error) {
+      this.snackBar.open(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'Fechar', {
+        duration: 5000,
+      });
+    }
+  }
+
+  private downloadZip(zipBlob: Blob): void {
     const url = URL.createObjectURL(zipBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'arquivos.zip';
+    link.download = 'certificados.zip';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

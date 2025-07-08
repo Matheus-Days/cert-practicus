@@ -1,27 +1,90 @@
-# CertPracticus
+# Cert Practicus
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.9.
+Sistema para geração de certificados em lote com assinatura digital.
 
-## Development server
+## Funcionalidades
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- Upload de template PDF com campos de formulário
+- Upload de planilha Excel com lista de participantes
+- Seleção de certificado digital para assinatura
+- Geração de certificados em lote usando Web Worker
+- Barra de progresso em tempo real
+- Download automático do arquivo ZIP com todos os certificados
 
-## Code scaffolding
+## Tecnologias
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- Angular 17
+- TypeScript
+- PDF-lib para manipulação de PDFs
+- XLSX para leitura de planilhas
+- @zip.js/zip.js para criação de arquivos ZIP
+- Angular Material para interface
+- Web Workers para processamento assíncrono
 
-## Build
+## Estrutura do Projeto
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+```
+src/
+├── app/
+│   ├── pages/
+│   │   └── certificate-form/          # Formulário principal
+│   ├── services/
+│   │   ├── certificates.service.ts    # Serviço principal
+│   │   ├── certificate-worker.service.ts  # Gerenciador do Web Worker
+│   │   └── cryptography/
+│   │       └── pdf-signing.service.ts # Serviço de assinatura
+│   └── workers/
+│       └── certificate-generator.worker.ts # Web Worker para processamento
+└── components/
+    └── digital-certificate/           # Componente de seleção de certificado
+```
 
-## Running unit tests
+## Como Usar
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### 1. Template PDF
+O template deve conter dois campos de formulário:
+- `nomeParticipante`: campo para o nome do participante
+- `localEData`: campo para local e data do evento
 
-## Running end-to-end tests
+### 2. Planilha Excel
+A planilha deve ter:
+- Uma coluna com cabeçalho `nomeParticipante`
+- Lista de nomes dos participantes
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+### 3. Certificado Digital
+Selecione um certificado digital válido para assinar os PDFs.
 
-## Further help
+### 4. Local e Data
+Digite o local e data no formato: "São Paulo, 15 de dezembro de 2024."
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### 5. Geração
+Clique em "Gerar certificados" e acompanhe o progresso em tempo real.
+
+## Web Worker
+
+O sistema utiliza um Web Worker para processar a geração dos certificados de forma assíncrona, evitando o travamento da interface do usuário. O worker:
+
+1. Preenche cada PDF com os dados do participante
+2. Assina cada PDF com o certificado digital
+3. Cria um arquivo ZIP com todos os certificados
+4. Retorna o progresso em tempo real para a interface
+
+## Desenvolvimento
+
+```bash
+# Instalar dependências
+yarn install
+
+# Executar em modo desenvolvimento
+yarn start
+
+# Build para produção
+yarn build
+```
+
+## Configuração do Web Worker
+
+O projeto está configurado para suportar Web Workers com:
+- `tsconfig.worker.json`: configuração TypeScript específica para workers
+- `angular.json`: configuração do Angular CLI para workers
+- Suporte a módulos ES6 nos workers
