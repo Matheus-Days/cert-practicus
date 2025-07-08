@@ -42,7 +42,9 @@
   </mat-step>
   <mat-step>
     <ng-template matStepLabel>Certificado digital</ng-template>
-    <digital-certificate-component (selected)="stepper.next()" (cancel)="stepper.previous()" />
+    <ng-template matStepContent>
+      <digital-certificate-component (selected)="stepper.next()" (cancel)="stepper.previous()" />
+    </ng-template>
   </mat-step>
   <mat-step
     [hasError]="invalidWorkbook()"

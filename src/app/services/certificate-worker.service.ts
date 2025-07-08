@@ -1,5 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
+import { ISelectionSuccessEvent } from '@peculiar/fortify-webcomponents';
 
 export interface CertificateProgress {
   current: number;
@@ -10,6 +11,14 @@ export interface CertificateProgress {
 
 export interface CertificateResult {
   zipBlob: Blob;
+}
+
+// Tipo para dados do certificado serializados
+export interface CertificateData {
+  providerId: string;
+  certificateId: string;
+  certPem: string;
+  publicKeyAlgorithm: any;
 }
 
 @Injectable({
@@ -36,21 +45,13 @@ export class CertificateWorkerService {
   }
 
   private initializeWorker(): void {
-    if (typeof Worker !== 'undefined') {
-      this.worker = new Worker(
-        new URL('../workers/certificate-generator.worker', import.meta.url),
-        { type: 'module' }
-      );
-
-      this.worker.onmessage = (event) => {
-        this.handleWorkerMessage(event.data);
-      };
-
-      this.worker.onerror = (error) => {
-        this.handleWorkerError(error);
-      };
-    } else {
-      console.error('Web Workers não são suportados neste navegador');
+    try {
+      this.worker = new Worker(new URL('../workers/certificate-generator.worker', import.meta.url));
+      this.worker.onmessage = (event) => this.handleWorkerMessage(event.data);
+      this.worker.onerror = (error) => this.handleWorkerError(error);
+    } catch (error) {
+      console.error('Erro ao inicializar worker:', error);
+      this.errorSubject.next('Erro ao inicializar worker');
     }
   }
 
@@ -87,11 +88,31 @@ export class CertificateWorkerService {
     this.errorSubject.next(`Erro no worker: ${error.message}`);
   }
 
+  // Função para extrair dados do certificado selecionado
+  private async extractCertificateData(selectedCertificate: ISelectionSuccessEvent): Promise<CertificateData | undefined> {
+    try {
+      const provider = await selectedCertificate.socketProvider.getCrypto(selectedCertificate.providerId);
+      const cert = await provider.certStorage.getItem(selectedCertificate.certificateId);
+      const certPem = await provider.certStorage.exportCert('pem', cert);
+      
+      return {
+        providerId: selectedCertificate.providerId,
+        certificateId: selectedCertificate.certificateId,
+        certPem,
+        publicKeyAlgorithm: cert.publicKey.algorithm,
+      };
+    } catch (error) {
+      console.error('Erro ao extrair dados do certificado:', error);
+      return undefined;
+    }
+  }
+
   generateCertificates(
     names: string[],
     placeAndDate: string,
     pdfArrayBuffer: ArrayBuffer,
-    timeout: number
+    timeout: number,
+    selectedCertificate?: ISelectionSuccessEvent
   ): void {
     if (!this.worker) {
       this.errorSubject.next('Worker não está disponível');
@@ -101,14 +122,18 @@ export class CertificateWorkerService {
     this._isProcessing.set(true);
     this._progress.set(null);
 
-    this.worker.postMessage({
-      type: 'GENERATE_CERTIFICATES',
-      data: {
-        names,
-        placeAndDate,
-        pdfArrayBuffer,
-        timeout,
-      },
+    // Extrair dados do certificado se disponível
+    this.extractCertificateData(selectedCertificate!).then(certificateData => {
+      this.worker!.postMessage({
+        type: 'GENERATE_CERTIFICATES',
+        data: {
+          names,
+          placeAndDate,
+          pdfArrayBuffer,
+          timeout,
+          certificateData,
+        },
+      });
     });
   }
 

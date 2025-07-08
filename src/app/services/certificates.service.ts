@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { read, utils } from 'xlsx';
 import { CertificateWorkerService, CertificateProgress, CertificateResult } from './certificate-worker.service';
+import { ISelectionSuccessEvent } from '@peculiar/fortify-webcomponents';
 
 @Injectable({
   providedIn: 'root',
@@ -10,6 +11,7 @@ export class CertificatesService {
 
   private pdfArrayBuffer: ArrayBuffer | undefined;
   private _names = signal<string[]>([]);
+  private _selectedCertificate = signal<ISelectionSuccessEvent | undefined>(undefined);
 
   private _pdfValid = signal(false);
   private _workbookValid = signal(false);
@@ -17,6 +19,7 @@ export class CertificatesService {
   names = computed(() => this._names());
   pdfValid = computed(() => this._pdfValid());
   workbookValid = computed(() => this._workbookValid());
+  selectedCertificate = computed(() => this._selectedCertificate());
 
   // Expor observables do worker
   isProcessing = computed(() => this.certificateWorkerService.isProcessing());
@@ -24,6 +27,11 @@ export class CertificatesService {
   progress$ = this.certificateWorkerService.progress$;
   result$ = this.certificateWorkerService.result$;
   error$ = this.certificateWorkerService.error$;
+
+  // Método para definir o certificado selecionado
+  setSelectedCertificate(certificate: ISelectionSuccessEvent): void {
+    this._selectedCertificate.set(certificate);
+  }
 
   private async checkValidity(): Promise<void> {
     if (this.pdfArrayBuffer) {
@@ -56,7 +64,8 @@ export class CertificatesService {
       this._names(),
       placeAndDate,
       this.pdfArrayBuffer,
-      timeout
+      timeout,
+      this._selectedCertificate()
     );
   }
 
