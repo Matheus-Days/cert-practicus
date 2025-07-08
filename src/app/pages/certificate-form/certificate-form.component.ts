@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  effect,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -42,14 +50,20 @@ export class CertificateFormComponent implements OnInit, OnDestroy {
 
   placeAndDateControl = new FormControl<string>('', {
     nonNullable: true,
-    validators: Validators.required,
+    validators: [],
   });
   timeoutControl = new FormControl<number>(500, {
     nonNullable: true,
     validators: [Validators.required, Validators.min(100)],
   });
-  certificateProviderControl = new FormControl<IProvider | undefined>(undefined, Validators.required);
-  certificateControl = new FormControl<ICertificate | undefined>(undefined, Validators.required);
+  certificateProviderControl = new FormControl<IProvider | undefined>(
+    undefined,
+    Validators.required
+  );
+  certificateControl = new FormControl<ICertificate | undefined>(
+    undefined,
+    Validators.required
+  );
 
   form = new FormGroup({
     placeAndDateControl: this.placeAndDateControl,
@@ -76,6 +90,30 @@ export class CertificateFormComponent implements OnInit, OnDestroy {
       !this.workbookFile() ||
       (!!this.workbookFile() && !this.certificatesService.workbookValid())
   );
+
+  // Computed para verificar se o campo local e data é obrigatório
+  isPlaceAndDateRequired = computed<boolean>(() =>
+    this.certificatesService.hasLocalEDataField()
+  );
+
+  // Computed para verificar se o campo local e data é inválido
+  isPlaceAndDateInvalid = computed<boolean>(
+    () =>
+      this.isPlaceAndDateRequired() && !this.placeAndDateControl.value?.trim()
+  );
+
+  constructor() {
+    // Effect para atualizar validações do campo local e data
+    effect(() => {
+      const hasField = this.certificatesService.hasLocalEDataField();
+      if (hasField) {
+        this.placeAndDateControl.addValidators(Validators.required);
+      } else {
+        this.placeAndDateControl.removeValidators(Validators.required);
+      }
+      this.placeAndDateControl.updateValueAndValidity();
+    });
+  }
 
   ngOnInit(): void {
     // Inscrever nos observables do worker
@@ -108,9 +146,13 @@ export class CertificateFormComponent implements OnInit, OnDestroy {
         this.timeoutControl.value
       );
     } catch (error) {
-      this.snackBar.open(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`, 'Fechar', {
-        duration: 5000,
-      });
+      this.snackBar.open(
+        `Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        'Fechar',
+        {
+          duration: 5000,
+        }
+      );
     }
   }
 
@@ -148,7 +190,7 @@ function fileFromEvent(event: Event): File | undefined {
 }
 
 function formatPlaceAndDate(inputString?: string): string {
-  if (!inputString) return "";
+  if (!inputString) return '';
 
   const trimmedString = inputString.trim();
 
@@ -156,8 +198,8 @@ function formatPlaceAndDate(inputString?: string): string {
   const restOfString = trimmedString.slice(1);
   let formattedString = firstLetter + restOfString;
 
-  if (!formattedString.endsWith(".")) {
-    formattedString += ".";
+  if (!formattedString.endsWith('.')) {
+    formattedString += '.';
   }
 
   return formattedString;

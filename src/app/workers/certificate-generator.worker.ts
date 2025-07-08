@@ -68,10 +68,12 @@ async function fillPdfWithData(
 ): Promise<PDFDocument> {
   const pdf = await PDFDocument.load(pdfArrayBuffer);
   const form = pdf.getForm();
-  const nomeParticipante = form.getTextField('nomeParticipante');
+  const nomeParticipante = form.getTextField('nomeDoParticipante');
   nomeParticipante.setText(name);
-  const localEData = form.getTextField('localEData');
-  localEData.setText(placeAndDate);
+  if (placeAndDate) {
+    const localEData = form.getTextField('localEData');
+    localEData.setText(placeAndDate);
+  }
   form.flatten();
   return pdf;
 }

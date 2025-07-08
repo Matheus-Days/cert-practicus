@@ -15,10 +15,12 @@ export class CertificatesService {
 
   private _pdfValid = signal(false);
   private _workbookValid = signal(false);
+  private _hasLocalEDataField = signal(false);
 
   names = computed(() => this._names());
   pdfValid = computed(() => this._pdfValid());
   workbookValid = computed(() => this._workbookValid());
+  hasLocalEDataField = computed(() => this._hasLocalEDataField());
   selectedCertificate = computed(() => this._selectedCertificate());
 
   // Expor observables do worker
@@ -39,15 +41,19 @@ export class CertificatesService {
       const { PDFDocument } = await import('pdf-lib');
       const pdf = await PDFDocument.load(this.pdfArrayBuffer);
       let nomeParticipante: any;
+      let localEData: any;
       try {
         const form = pdf.getForm();
-        nomeParticipante = form.getTextField('nomeParticipante');
-      } catch {
-        nomeParticipante = undefined;
+        nomeParticipante = form.getTextField('nomeDoParticipante');
+        localEData = form.getTextField('localEData');
+      } catch (e) {
+        console.warn(e);
       }
       this._pdfValid.set(!!nomeParticipante);
+      this._hasLocalEDataField.set(!!localEData);
     } else {
       this._pdfValid.set(false);
+      this._hasLocalEDataField.set(false);
     }
     this._workbookValid.set(this._names().length > 0);
   }
