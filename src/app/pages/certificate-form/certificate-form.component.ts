@@ -50,7 +50,6 @@ export class CertificateFormComponent implements OnInit, OnDestroy {
 
   placeAndDateControl = new FormControl<string>('', {
     nonNullable: true,
-    validators: [],
   });
   timeoutControl = new FormControl<number>(500, {
     nonNullable: true,
@@ -94,12 +93,6 @@ export class CertificateFormComponent implements OnInit, OnDestroy {
   // Computed para verificar se o campo local e data é obrigatório
   isPlaceAndDateRequired = computed<boolean>(() =>
     this.certificatesService.hasLocalEDataField()
-  );
-
-  // Computed para verificar se o campo local e data é inválido
-  isPlaceAndDateInvalid = computed<boolean>(
-    () =>
-      this.isPlaceAndDateRequired() && !this.placeAndDateControl.value?.trim()
   );
 
   constructor() {

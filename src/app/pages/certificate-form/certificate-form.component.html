@@ -43,7 +43,10 @@
   <mat-step>
     <ng-template matStepLabel>Certificado digital</ng-template>
     <ng-template matStepContent>
-      <digital-certificate-component (selected)="stepper.next()" (cancel)="stepper.previous()" />
+      <digital-certificate-component
+        (selected)="stepper.next()"
+        (cancel)="stepper.previous()"
+      />
     </ng-template>
   </mat-step>
   <mat-step
@@ -103,29 +106,20 @@
     <div class="flex flex-col gap-4 px-8">
       <h6>Digite o local e a data do evento</h6>
       @if (!isPlaceAndDateRequired()) {
-        <p class="text-sm text-gray-600 mb-2">
-          O campo "local e data" não foi detectado no PDF. Este campo é opcional.
-        </p>
+      <p class="text-sm text-gray-600 mb-2">
+        O campo "local e data" não foi detectado no PDF. Este campo é opcional.
+      </p>
       }
       <mat-form-field class="w-96">
         <mat-label>Local e data</mat-label>
         <input matInput type="text" [formControl]="placeAndDateControl" />
-        @if (isPlaceAndDateRequired() && placeAndDateControl.hasError('required')) {
-          <mat-error>Preenchimento obrigatório.</mat-error>
-        }
         <mat-hint
           >Digite no formato "[local], [dia] de [mês] de [ano]"</mat-hint
         >
       </mat-form-field>
       <div class="flex gap-4 mt-4">
         <button mat-stroked-button matStepperPrevious>Anterior</button>
-        <button
-          mat-stroked-button
-          matStepperNext
-          [disabled]="isPlaceAndDateInvalid() || timeoutControl.invalid"
-        >
-          Próximo
-        </button>
+        <button mat-stroked-button matStepperNext>Próximo</button>
       </div>
     </div>
   </mat-step>
@@ -141,45 +135,48 @@
       <div class="pb-4">
         <mat-form-field class="w-96">
           <mat-label>Tempo entre assinaturas</mat-label>
-          <input 
-            matInput 
-            type="number" 
+          <input
+            matInput
+            type="number"
             [formControl]="timeoutControl"
             min="100"
-            step="100" />
+            step="100"
+          />
           @if (timeoutControl.hasError('required')) {
-            <mat-error>Preenchimento obrigatório.</mat-error>
+          <mat-error>Preenchimento obrigatório.</mat-error>
+          } @if (timeoutControl.hasError('min')) {
+          <mat-error>O valor mínimo é 100 milissegundos.</mat-error>
           }
-          @if (timeoutControl.hasError('min')) {
-            <mat-error>O valor mínimo é 100 milissegundos.</mat-error>
-          }
-          <mat-hint>Maiores valores significam maior estabilidade, mas também mais tempo de processamento.</mat-hint>
+          <mat-hint
+            >Maiores valores significam maior estabilidade, mas também mais
+            tempo de processamento.</mat-hint
+          >
         </mat-form-field>
       </div>
-      
+
       @if (isProcessing()) {
-        <div class="flex flex-col gap-2">
-          <p class="text-sm text-gray-600">
-            {{ progress()?.name || 'Processando...' }}
-          </p>
-          <mat-progress-bar 
-            mode="determinate" 
-            [value]="progress()?.percentage || 0"
-            class="w-full">
-          </mat-progress-bar>
-          <p class="text-xs text-gray-500">
-            {{ progress()?.percentage || 0 }}%
-          </p>
-        </div>
+      <div class="flex flex-col gap-2">
+        <p class="text-sm text-gray-600">
+          {{ progress()?.name || "Processando..." }}
+        </p>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="progress()?.percentage || 0"
+          class="w-full"
+        >
+        </mat-progress-bar>
+        <p class="text-xs text-gray-500">{{ progress()?.percentage || 0 }}%</p>
+      </div>
       }
-      
+
       <div class="flex gap-4 mt-4">
         <button mat-stroked-button matStepperPrevious>Anterior</button>
-        <button 
-          mat-flat-button 
+        <button
+          mat-flat-button
           (click)="generateCertificates()"
-          [disabled]="isProcessing()">
-          {{ isProcessing() ? 'Gerando...' : 'Gerar certificados' }}
+          [disabled]="isProcessing()"
+        >
+          {{ isProcessing() ? "Gerando..." : "Gerar certificados" }}
         </button>
       </div>
     </div>
